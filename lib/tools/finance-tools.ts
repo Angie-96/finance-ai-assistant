@@ -42,6 +42,32 @@ export const getHistoricalPrices = tool({
   }),
   execute: async ({ symbol, days }) => {
     // TODO: replace with real historical data call
-    return { candles: [] as z.infer<typeof HistoricalPriceSchema>[] };
+    let price = 100 + (symbol.charCodeAt(0) % 20) * 5;
+    const candles: z.infer<typeof HistoricalPriceSchema>[] = [];
+    const today = new Date();
+
+    for (let i = days; i > 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+
+      const open = price;
+      const drift = (Math.sin(i / 3) + Math.random() - 0.5) * 3;
+      const close = Math.max(1, open + drift);
+      const high = Math.max(open, close) + Math.random() * 2;
+      const low = Math.min(open, close) - Math.random() * 2;
+
+      candles.push({
+        time: date.toISOString().slice(0, 10),
+        open: Number(open.toFixed(2)),
+        high: Number(high.toFixed(2)),
+        low: Number(low.toFixed(2)),
+        close: Number(close.toFixed(2)),
+        volume: Math.floor(1_000_000 + Math.random() * 5_000_000),
+      });
+
+      price = close;
+    }
+
+    return { candles };
   },
 });

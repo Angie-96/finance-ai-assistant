@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useState } from "react";
 import type { Quote, NewsItem, HistoricalPrice } from "@/lib/schemas/finance";
+import { CandlestickChart } from "@/components/chart/CandlestickChart";
 
 const SUGGESTIONS = [
   "What's the latest quote for NVDA?",
@@ -169,7 +170,7 @@ function MessagePart({ part }: { part: UIMessagePart }) {
         case "output-available": {
           const candles =
             (part.output as { candles: HistoricalPrice[] })?.candles ?? [];
-          return <PriceHistoryTable candles={candles} />;
+          return <CandlestickChart candles={candles} />;
         }
         case "output-error":
           return <ToolError message={part.errorText} />;
@@ -258,41 +259,5 @@ function NewsList({ items }: { items: NewsItem[] }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-function PriceHistoryTable({ candles }: { candles: HistoricalPrice[] }) {
-  if (candles.length === 0) {
-    return (
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        No historical data found.
-      </p>
-    );
-  }
-  return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <table className="w-full text-left text-xs">
-        <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-          <tr>
-            <th className="px-3 py-2">Date</th>
-            <th className="px-3 py-2">Open</th>
-            <th className="px-3 py-2">High</th>
-            <th className="px-3 py-2">Low</th>
-            <th className="px-3 py-2">Close</th>
-          </tr>
-        </thead>
-        <tbody>
-          {candles.slice(-10).map((c) => (
-            <tr key={c.time} className="border-b border-zinc-100 last:border-0 dark:border-zinc-900">
-              <td className="px-3 py-2 font-mono">{c.time}</td>
-              <td className="px-3 py-2 font-mono">{c.open.toFixed(2)}</td>
-              <td className="px-3 py-2 font-mono">{c.high.toFixed(2)}</td>
-              <td className="px-3 py-2 font-mono">{c.low.toFixed(2)}</td>
-              <td className="px-3 py-2 font-mono">{c.close.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
