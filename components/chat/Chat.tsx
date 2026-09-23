@@ -28,7 +28,7 @@ export function Chat() {
 
   return (
     <div className="flex h-dvh w-full flex-col">
-      <header className="border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
+      <header className="border-b border-zinc-200 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6 dark:border-zinc-800">
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Finance Research Assistant
         </h1>
@@ -38,9 +38,9 @@ export function Chat() {
       </header>
 
       <main className="flex flex-1 min-h-0 flex-col">
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           {messages.length === 0 ? (
-            <div className="mx-auto flex max-w-md flex-col gap-2 pt-12 text-center">
+            <div className="mx-auto flex max-w-md flex-col gap-2 pt-8 text-center sm:pt-12">
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 Try asking:
               </p>
@@ -49,7 +49,7 @@ export function Chat() {
                   key={s}
                   type="button"
                   onClick={() => submit(s)}
-                  className="rounded-lg border border-zinc-200 px-4 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  className="rounded-lg border border-zinc-200 px-4 py-3 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
                 >
                   {s}
                 </button>
@@ -92,19 +92,19 @@ export function Chat() {
             e.preventDefault();
             submit(input);
           }}
-          className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-6 py-4 dark:border-zinc-800"
+          className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 dark:border-zinc-800"
         >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isBusy}
             placeholder="Ask about a stock..."
-            className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+            className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
           />
           <button
             type="submit"
             disabled={isBusy || !input.trim()}
-            className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+            className="rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
           >
             {isBusy ? "..." : "Send"}
           </button>
@@ -209,7 +209,7 @@ function ToolError({ message }: { message?: string }) {
 function QuoteCard({ quote }: { quote: Quote }) {
   const isUp = quote.changePercent >= 0;
   return (
-    <div className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+    <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
       <div>
         <p className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-50">
           {quote.symbol}
@@ -218,7 +218,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
           as of {new Date(quote.asOf).toLocaleString()}
         </p>
       </div>
-      <div className="text-right">
+      <div className="sm:text-right">
         <p className="font-mono text-sm text-zinc-900 dark:text-zinc-50">
           ${quote.price.toFixed(2)}
         </p>
