@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { alphaVantageRequest } from "../alpha-vantage";
 import {
   QuoteSchema,
   NewsItemSchema,
@@ -10,13 +11,23 @@ export const getQuote = tool({
   description: "Get the latest price and daily change for a US equity ticker",
   inputSchema: z.object({ symbol: z.string().describe("Ticker, e.g. NVDA") }),
   execute: async ({ symbol }) => {
-    // TODO: replace with real Alpha Vantage call
+    const data = await alphaVantageRequest({
+      function: "GLOBAL_QUOTE",
+      symbol,
+    });
+    const quote = data["Global Quote"] as Record<string, string> | undefined;
+    if (!quote || !quote["05. price"]) {
+      throw new Error(`No quote data found for ${symbol}`);
+    }
+
     return QuoteSchema.parse({
       symbol,
-      price: 0,
-      changePercent: 0,
-      volume: 0,
-      asOf: new Date().toISOString(),
+      price: Number(quote["05. price"]),
+      changePercent: Number(quote["10. change percent"].replace("%", "")),
+      volume: Number(quote["06. volume"]),
+      asOf: new Date(
+        `${quote["07. latest trading day"]}T00:00:00Z`,
+      ).toISOString(),
     });
   },
 });
@@ -41,32 +52,31 @@ export const getHistoricalPrices = tool({
     days: z.number().default(30),
   }),
   execute: async ({ symbol, days }) => {
-    // TODO: replace with real historical data call
-    let price = 100 + (symbol.charCodeAt(0) % 20) * 5;
-    const candles: z.infer<typeof HistoricalPriceSchema>[] = [];
-    const today = new Date();
-
-    for (let i = days; i > 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-
-      const open = price;
-      const drift = (Math.sin(i / 3) + Math.random() - 0.5) * 3;
-      const close = Math.max(1, open + drift);
-      const high = Math.max(open, close) + Math.random() * 2;
-      const low = Math.min(open, close) - Math.random() * 2;
-
-      candles.push({
-        time: date.toISOString().slice(0, 10),
-        open: Number(open.toFixed(2)),
-        high: Number(high.toFixed(2)),
-        low: Number(low.toFixed(2)),
-        close: Number(close.toFixed(2)),
-        volume: Math.floor(1_000_000 + Math.random() * 5_000_000),
-      });
-
-      price = close;
+    const data = await alphaVantageRequest({
+      function: "TIME_SERIES_DAILY",
+      symbol,
+      outputsize: days > 100 ? "full" : "compact",
+    });
+    const series = data["Time Series (Daily)"] as
+      | Record<string, Record<string, string>>
+      | undefined;
+    if (!series) {
+      throw new Error(`No historical data found for ${symbol}`);
     }
+
+    const candles = Object.entries(series)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-days)
+      .map(([time, values]) =>
+        HistoricalPriceSchema.parse({
+          time,
+          open: Number(values["1. open"]),
+          high: Number(values["2. high"]),
+          low: Number(values["3. low"]),
+          close: Number(values["4. close"]),
+          volume: Number(values["5. volume"]),
+        }),
+      );
 
     return { candles };
   },
