@@ -285,6 +285,25 @@ function QuoteCard({ quote }: { quote: Quote }) {
   );
 }
 
+function ExternalLinkIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5"
+      aria-hidden="true"
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+    </svg>
+  );
+}
+
 function NewsList({ items }: { items: NewsItem[] }) {
   if (items.length === 0) {
     return (
@@ -298,19 +317,26 @@ function NewsList({ items }: { items: NewsItem[] }) {
       {items.map((item) => (
         <li
           key={item.url}
-          className="rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
+          className="flex items-start justify-between gap-3 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
         >
+          <div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+              {item.headline}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {item.summary}
+            </p>
+          </div>
           <a
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-50"
+            aria-label={`Open article: ${item.headline}`}
+            className="flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700 transition-transform hover:bg-zinc-50 active:scale-[0.97] dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            {item.headline}
+            Open
+            <ExternalLinkIcon />
           </a>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            {item.summary}
-          </p>
         </li>
       ))}
     </ul>
