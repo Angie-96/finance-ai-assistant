@@ -1,6 +1,9 @@
 const BASE_URL = "https://www.alphavantage.co/query";
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export class AlphaVantageError extends Error {}
+
+const cache = new Map<string, { data: Record<string, unknown>; expiresAt: number }>();
 
 export async function alphaVantageRequest(
   params: Record<string, string>,
@@ -14,6 +17,13 @@ export async function alphaVantageRequest(
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }
+  const cacheKey = url.toString();
+
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   url.searchParams.set("apikey", apiKey);
 
   const response = await fetch(url);
@@ -30,6 +40,8 @@ export async function alphaVantageRequest(
   if (typeof errorMessage === "string") {
     throw new AlphaVantageError(errorMessage);
   }
+
+  cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 
   return data;
 }
