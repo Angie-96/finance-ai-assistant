@@ -1,9 +1,28 @@
 const BASE_URL = "https://www.alphavantage.co/query";
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const MIN_REQUEST_INTERVAL_MS = 1500;
 
 export class AlphaVantageError extends Error {}
 
 const cache = new Map<string, { data: Record<string, unknown>; expiresAt: number }>();
+
+// Alpha Vantage's free tier allows only 1 request/second. The model can call
+// multiple tools in the same turn (e.g. getQuote + getHistoricalPrices), so
+// requests must be serialized here rather than fired concurrently.
+let requestQueue: Promise<void> = Promise.resolve();
+let lastRequestAt = 0;
+
+function throttle(): Promise<void> {
+  const next = requestQueue.then(async () => {
+    const wait = Math.max(0, lastRequestAt + MIN_REQUEST_INTERVAL_MS - Date.now());
+    if (wait > 0) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+    lastRequestAt = Date.now();
+  });
+  requestQueue = next;
+  return next;
+}
 
 export async function alphaVantageRequest(
   params: Record<string, string>,
@@ -26,6 +45,7 @@ export async function alphaVantageRequest(
 
   url.searchParams.set("apikey", apiKey);
 
+  await throttle();
   const response = await fetch(url);
   if (!response.ok) {
     throw new AlphaVantageError(
