@@ -37,76 +37,79 @@ export function Chat() {
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        {messages.length === 0 ? (
-          <div className="mx-auto flex max-w-md flex-col gap-2 pt-12 text-center">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Try asking:
-            </p>
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => submit(s)}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="mx-auto flex max-w-2xl flex-col gap-6">
-            {messages.map((message) => (
-              <div key={message.id} className="flex flex-col gap-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  {message.role === "user" ? "You" : "Assistant"}
-                </span>
-                <div className="flex flex-col gap-3">
-                  {message.parts.map((part, index) => (
-                    <MessagePart key={index} part={part} />
-                  ))}
+      <main className="flex flex-1 min-h-0 flex-col">
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {messages.length === 0 ? (
+            <div className="mx-auto flex max-w-md flex-col gap-2 pt-12 text-center">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Try asking:
+              </p>
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => submit(s)}
+                  className="rounded-lg border border-zinc-200 px-4 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          ) : (
+            // TODO: add role="log"/aria-live="polite" so screen readers announce streamed messages
+            <div className="mx-auto flex max-w-2xl flex-col gap-6">
+              {messages.map((message) => (
+                <div key={message.id} className="flex flex-col gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                    {message.role === "user" ? "You" : "Assistant"}
+                  </span>
+                  <div className="flex flex-col gap-3">
+                    {message.parts.map((part, index) => (
+                      <MessagePart key={index} part={part} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {error && (
-          <div className="mx-auto mt-4 flex max-w-2xl flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-            <span>Something went wrong.</span>
-            <button
-              type="button"
-              onClick={() => regenerate()}
-              className="self-start font-medium underline"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-      </div>
+          {error && (
+            <div className="mx-auto mt-4 flex max-w-2xl flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+              <span>Something went wrong.</span>
+              <button
+                type="button"
+                onClick={() => regenerate()}
+                className="self-start font-medium underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit(input);
-        }}
-        className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-6 py-4 dark:border-zinc-800"
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={isBusy}
-          placeholder="Ask about a stock..."
-          className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
-        />
-        <button
-          type="submit"
-          disabled={isBusy || !input.trim()}
-          className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit(input);
+          }}
+          className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-6 py-4 dark:border-zinc-800"
         >
-          {isBusy ? "..." : "Send"}
-        </button>
-      </form>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={isBusy}
+            placeholder="Ask about a stock..."
+            className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+          />
+          <button
+            type="submit"
+            disabled={isBusy || !input.trim()}
+            className="rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            {isBusy ? "..." : "Send"}
+          </button>
+        </form>
+      </main>
     </div>
   );
 }
