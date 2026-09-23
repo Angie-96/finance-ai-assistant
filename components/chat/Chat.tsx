@@ -5,6 +5,7 @@ import { DefaultChatTransport } from "ai";
 import { useState } from "react";
 import type { Quote, NewsItem, HistoricalPrice } from "@/lib/schemas/finance";
 import { CandlestickChart } from "@/components/chart/CandlestickChart";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const SUGGESTIONS = [
   "What's the latest quote for NVDA?",
@@ -28,13 +29,16 @@ export function Chat() {
 
   return (
     <div className="flex h-dvh w-full flex-col">
-      <header className="border-b border-zinc-200 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6 dark:border-zinc-800">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Finance Research Assistant
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Ask about quotes, news, or price history for US equities.
-        </p>
+      <header className="flex items-start justify-between border-b border-zinc-200 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6 dark:border-zinc-800">
+        <div>
+          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Finance Research Assistant
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Ask about quotes, news, or price history for US equities.
+          </p>
+        </div>
+        <ThemeToggle />
       </header>
 
       <main className="flex flex-1 min-h-0 flex-col">

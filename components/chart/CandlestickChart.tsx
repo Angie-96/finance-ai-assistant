@@ -12,6 +12,7 @@ export function CandlestickChart({ candles }: { candles: HistoricalPrice[] }) {
     const container = containerRef.current;
     if (!container || candles.length === 0) return;
 
+    // TODO: read document.documentElement.dataset.theme so this follows the manual theme toggle, not just system preference
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
     const chart = createChart(container, {
