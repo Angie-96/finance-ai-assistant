@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { alphaVantageRequest } from "../alpha-vantage";
+import { alphaVantageRequest, parseAlphaVantageTimestamp } from "../alpha-vantage";
 import {
   QuoteSchema,
   NewsItemSchema,
@@ -39,8 +39,26 @@ export const getNews = tool({
     limit: z.number().default(5),
   }),
   execute: async ({ symbol, limit }) => {
-    // TODO: replace with real news API call
-    return { items: [] as z.infer<typeof NewsItemSchema>[] };
+    const data = await alphaVantageRequest({
+      function: "NEWS_SENTIMENT",
+      tickers: symbol,
+      limit: String(limit),
+    });
+    const feed = data["feed"] as Array<Record<string, string>> | undefined;
+    if (!feed) {
+      return { items: [] as z.infer<typeof NewsItemSchema>[] };
+    }
+
+    const items = feed.slice(0, limit).map((item) =>
+      NewsItemSchema.parse({
+        headline: item.title,
+        summary: item.summary,
+        url: item.url,
+        publishedAt: parseAlphaVantageTimestamp(item.time_published),
+      }),
+    );
+
+    return { items };
   },
 });
 

@@ -33,3 +33,21 @@ export async function alphaVantageRequest(
 
   return data;
 }
+
+export function parseAlphaVantageTimestamp(raw: string): string {
+  const match = raw.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  if (!match) {
+    throw new AlphaVantageError(`Unrecognized timestamp format: ${raw}`);
+  }
+  const [, year, month, day, hour, minute, second] = match;
+  return new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ),
+  ).toISOString();
+}

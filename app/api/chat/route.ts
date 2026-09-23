@@ -26,6 +26,13 @@ export async function POST(req: Request) {
   });
 
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
+    stream: toUIMessageStream({
+      stream: result.stream,
+      onError: (error) => {
+        console.error(error);
+        if (error instanceof Error) return error.message;
+        return "An error occurred.";
+      },
+    }),
   });
 }
