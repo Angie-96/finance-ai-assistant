@@ -4,6 +4,7 @@ import {
   convertToModelMessages,
   toUIMessageStream,
   createUIMessageStreamResponse,
+  isStepCount,
   type UIMessage,
 } from "ai";
 import {
@@ -23,6 +24,10 @@ export async function POST(req: Request) {
       "You are a financial research assistant. Use tools to get real quotes, news, and price history before answering. Cite sources.",
     messages: await convertToModelMessages(messages),
     tools: { getQuote, getNews, getHistoricalPrices },
+    // Default is a single step, which ends the stream right after a tool call
+    // with no written answer. Allow room for tool calls plus a final reply;
+    // the cap keeps a looping model from burning Alpha Vantage's daily quota.
+    stopWhen: isStepCount(5),
   });
 
   return createUIMessageStreamResponse({
