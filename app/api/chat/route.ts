@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: google("gemini-3.6-flash"),
     system:
-      "You are a financial research assistant. Use tools to get real quotes, news, and price history before answering. Cite sources.",
+      "You are a financial research assistant. Use tools to get real quotes, news, and price history before answering. Cite sources. Write dates in the format \"Sep 23, 2026\".",
     messages: await convertToModelMessages(messages),
     tools: { getQuote, getNews, getHistoricalPrices },
     // Default is a single step, which ends the stream right after a tool call

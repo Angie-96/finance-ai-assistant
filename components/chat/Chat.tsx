@@ -8,6 +8,7 @@ import type { Quote, NewsItem, HistoricalPrice } from "@/lib/schemas/finance";
 import { CandlestickChart } from "@/components/chart/CandlestickChart";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Markdown } from "@/components/chat/Markdown";
+import { formatDate } from "@/lib/format-date";
 import {
   blurSwap,
   exitTransition,
@@ -22,8 +23,16 @@ const SUGGESTIONS = [
 ];
 
 export function Chat() {
+  // Set when a reply ends without the model finishing normally (e.g. Gemini
+  // returns finishReason "other" mid-answer), so a truncated reply isn't
+  // presented as complete.
+  const [cutOff, setCutOff] = useState(false);
   const { messages, sendMessage, status, error, regenerate } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    onFinish: ({ finishReason, isAbort, isDisconnect, isError }) => {
+      if (isError || isAbort) return;
+      setCutOff(isDisconnect || (finishReason !== undefined && finishReason !== "stop"));
+    },
   });
   const [input, setInput] = useState("");
 
@@ -31,8 +40,14 @@ export function Chat() {
 
   const submit = (text: string) => {
     if (!text.trim() || isBusy) return;
+    setCutOff(false);
     sendMessage({ text });
     setInput("");
+  };
+
+  const retry = () => {
+    setCutOff(false);
+    regenerate();
   };
 
   return (
@@ -123,22 +138,19 @@ export function Chat() {
             )}
 
             <AnimatePresence>
-              {error && (
-                <motion.div
-                  variants={riseIn}
-                  initial="hidden"
-                  animate="visible"
-                  exit={{ opacity: 0, transition: exitTransition }}
-                  className="mx-auto mt-4 flex max-w-2xl flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-                  <span>Something went wrong.</span>
-                  <button
-                    type="button"
-                    onClick={() => regenerate()}
-                    className="self-start font-medium underline"
-                  >
-                    Retry
-                  </button>
-                </motion.div>
+              {error ? (
+                <Notice key="error" tone="error" onRetry={retry}>
+                  {isQuotaError(error)
+                    ? "The AI model's free-tier limit was reached. Wait a minute and retry — if it keeps happening, the daily limit is used up."
+                    : "Something went wrong."}
+                </Notice>
+              ) : (
+                cutOff &&
+                !isBusy && (
+                  <Notice key="cut-off" tone="warning" onRetry={retry}>
+                    This reply was cut off before it finished.
+                  </Notice>
+                )
               )}
             </AnimatePresence>
           </div>
@@ -179,6 +191,44 @@ export function Chat() {
         </main>
       </div>
     </MotionConfig>
+  );
+}
+
+function isQuotaError(error: Error): boolean {
+  return /quota|rate limit|resource.?exhausted/i.test(error.message);
+}
+
+function Notice({
+  tone,
+  onRetry,
+  children,
+}: {
+  tone: "error" | "warning";
+  onRetry: () => void;
+  children: ReactNode;
+}) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300";
+  return (
+    <motion.div
+      role="status"
+      variants={riseIn}
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0, transition: exitTransition }}
+      className={`mx-auto mt-4 flex max-w-2xl flex-col gap-2 rounded-lg border px-4 py-3 text-sm ${toneClass}`}
+    >
+      <span>{children}</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="self-start font-medium underline"
+      >
+        Retry
+      </button>
+    </motion.div>
   );
 }
 
@@ -370,13 +420,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
           {quote.symbol}
         </p>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          {/* asOf is a trading day at UTC midnight; format in UTC so local
-              time zones west of UTC don't roll it back to the previous day. */}
-          as of{" "}
-          {new Date(quote.asOf).toLocaleDateString(undefined, {
-            dateStyle: "medium",
-            timeZone: "UTC",
-          })}
+          as of {formatDate(quote.asOf)}
         </p>
       </div>
       <div className="sm:text-right">

@@ -8,6 +8,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { HistoricalPrice } from "@/lib/schemas/finance";
+import { formatDate } from "@/lib/format-date";
 
 type Tooltip = {
   x: number;
@@ -35,12 +36,10 @@ function palette(isDark: boolean) {
 }
 
 function formatChartTime(time: Time): string {
-  if (typeof time === "string") return time;
-  if (typeof time === "number") {
-    return new Date(time * 1000).toISOString().slice(0, 10);
-  }
+  if (typeof time === "string") return formatDate(time);
+  if (typeof time === "number") return formatDate(new Date(time * 1000));
   const { year, month, day } = time;
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return formatDate(new Date(Date.UTC(year, month - 1, day)));
 }
 
 export function CandlestickChart({ candles }: { candles: HistoricalPrice[] }) {
@@ -65,6 +64,7 @@ export function CandlestickChart({ candles }: { candles: HistoricalPrice[] }) {
         horzLines: { color: colors.grid },
       },
       crosshair: { mode: CrosshairMode.Magnet },
+      localization: { timeFormatter: formatChartTime },
       timeScale: { borderColor: colors.border },
       rightPriceScale: { borderColor: colors.border },
     });
