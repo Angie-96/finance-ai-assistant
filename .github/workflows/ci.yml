@@ -24,4 +24,8 @@ jobs:
       - run: npm run test
       - run: npm run build
 
-      # TODO: run Playwright e2e (needs `npx playwright install --with-deps` and a real GOOGLE_GENERATIVE_AI_API_KEY/ALPHA_VANTAGE_API_KEY setup)
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
