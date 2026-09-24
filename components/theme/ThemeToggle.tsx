@@ -1,6 +1,8 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { EASE_OUT } from "@/components/motion/transitions";
 
 type Theme = "light" | "dark";
 
@@ -18,6 +20,9 @@ export function ThemeToggle() {
   // localStorage/matchMedia). The real theme is applied right after mount,
   // before paint, via useLayoutEffect below.
   const [theme, setTheme] = useState<Theme>("light");
+  // Only animate the icon swap once the user has clicked; the post-mount
+  // correction to the stored theme should swap instantly.
+  const [hasToggled, setHasToggled] = useState(false);
 
   useLayoutEffect(() => {
     const active = readActiveTheme();
@@ -29,6 +34,7 @@ export function ThemeToggle() {
   const toggle = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
+    setHasToggled(true);
     document.documentElement.setAttribute("data-theme", next);
     window.localStorage.setItem("theme", next);
   };
@@ -42,9 +48,22 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-transform hover:bg-zinc-100 active:scale-90 dark:text-zinc-400 dark:hover:bg-zinc-800"
+      className="relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-transform hover:bg-zinc-100 active:scale-90 dark:text-zinc-400 dark:hover:bg-zinc-800"
     >
-      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={theme}
+          initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
+          transition={
+            hasToggled ? { duration: 0.2, ease: EASE_OUT } : { duration: 0 }
+          }
+          className="flex"
+        >
+          {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+        </motion.span>
+      </AnimatePresence>
     </button>
   );
 }

@@ -2,10 +2,17 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type { Quote, NewsItem, HistoricalPrice } from "@/lib/schemas/finance";
 import { CandlestickChart } from "@/components/chart/CandlestickChart";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import {
+  blurSwap,
+  exitTransition,
+  riseIn,
+  staggerChildren,
+} from "@/components/motion/transitions";
 
 const SUGGESTIONS = [
   "What's the latest quote for NVDA?",
@@ -28,108 +35,190 @@ export function Chat() {
   };
 
   return (
-    <div className="flex h-dvh w-full flex-col">
-      <header className="flex items-start justify-between border-b border-zinc-200 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6 dark:border-zinc-800">
-        <div>
-          <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Finance Research Assistant
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Ask about quotes, news, or price history for US equities.
-          </p>
-        </div>
-        <ThemeToggle />
-      </header>
+    // reducedMotion="user": honor the OS setting by dropping transform-based
+    // movement while keeping opacity fades.
+    <MotionConfig reducedMotion="user">
+      <div className="flex h-dvh w-full flex-col">
+        <header className="flex items-start justify-between border-b border-zinc-200 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-6 dark:border-zinc-800">
+          <div>
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              Finance Research Assistant
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Ask about quotes, news, or price history for US equities.
+            </p>
+          </div>
+          <ThemeToggle />
+        </header>
 
-      <main className="flex flex-1 min-h-0 flex-col">
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-          {messages.length === 0 ? (
-            <div className="mx-auto flex max-w-md flex-col gap-2 pt-8 text-center sm:pt-12">
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Try asking:
-              </p>
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => submit(s)}
-                  className="rounded-lg border border-zinc-200 px-4 py-3 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          ) : (
-            // TODO: add role="log"/aria-live="polite" so screen readers announce streamed messages
-            <div className="mx-auto flex max-w-2xl flex-col gap-6">
-              {messages.map((message) => (
-                <div key={message.id} className="flex flex-col gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                    {message.role === "user" ? "You" : "Assistant"}
-                  </span>
-                  <div className="flex flex-col gap-3">
-                    {message.parts.map((part, index) => (
-                      <MessagePart key={index} part={part} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {status === "submitted" && (
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                    Assistant
-                  </span>
-                  <TypingIndicator />
-                </div>
-              )}
-            </div>
-          )}
-
-          {error && (
-            <div className="mx-auto mt-4 flex max-w-2xl flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-              <span>Something went wrong.</span>
-              <button
-                type="button"
-                onClick={() => regenerate()}
-                className="self-start font-medium underline"
+        <main className="flex flex-1 min-h-0 flex-col">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            {messages.length === 0 ? (
+              <motion.div
+                variants={staggerChildren(0.05)}
+                initial="hidden"
+                animate="visible"
+                className="mx-auto flex max-w-md flex-col gap-2 pt-8 text-center sm:pt-12"
               >
-                Retry
-              </button>
-            </div>
-          )}
-        </div>
+                <motion.p
+                  variants={riseIn}
+                  className="text-sm text-zinc-500 dark:text-zinc-400"
+                >
+                  Try asking:
+                </motion.p>
+                {SUGGESTIONS.map((s) => (
+                  <motion.button
+                    key={s}
+                    type="button"
+                    variants={riseIn}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => submit(s)}
+                    className="rounded-lg border border-zinc-200 px-4 py-3 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                  >
+                    {s}
+                  </motion.button>
+                ))}
+              </motion.div>
+            ) : (
+              // TODO: add role="log"/aria-live="polite" so screen readers announce streamed messages
+              <div className="mx-auto flex max-w-2xl flex-col gap-6">
+                {messages.map((message) => (
+                  <motion.div
+                    key={message.id}
+                    variants={riseIn}
+                    initial="hidden"
+                    animate="visible"
+                    className="flex flex-col gap-2"
+                  >
+                    <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      {message.role === "user" ? "You" : "Assistant"}
+                    </span>
+                    <div className="flex flex-col gap-3">
+                      {message.parts.map((part, index) => (
+                        <MessagePart key={index} part={part} />
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit(input);
-          }}
-          className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 dark:border-zinc-800"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isBusy}
-            placeholder="Ask about a stock..."
-            className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
-          />
-          <button
-            type="submit"
-            disabled={isBusy || !input.trim()}
-            className="flex items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-transform active:scale-[0.97] disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+                {status === "submitted" && (
+                  <motion.div
+                    variants={riseIn}
+                    initial="hidden"
+                    animate="visible"
+                    className="flex flex-col gap-2"
+                  >
+                    <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      Assistant
+                    </span>
+                    <TypingIndicator />
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  variants={riseIn}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0, transition: exitTransition }}
+                  className="mx-auto mt-4 flex max-w-2xl flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+                  <span>Something went wrong.</span>
+                  <button
+                    type="button"
+                    onClick={() => regenerate()}
+                    className="self-start font-medium underline"
+                  >
+                    Retry
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit(input);
+            }}
+            className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 dark:border-zinc-800"
           >
-            {isBusy ? <Spinner /> : "Send"}
-          </button>
-        </form>
-      </main>
-    </div>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isBusy}
+              placeholder="Ask about a stock..."
+              className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+            <button
+              type="submit"
+              disabled={isBusy || !input.trim()}
+              className="relative flex min-w-[4.5rem] items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-transform active:scale-[0.97] disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={isBusy ? "busy" : "idle"}
+                  variants={blurSwap}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="flex items-center justify-center"
+                >
+                  {isBusy ? <Spinner /> : "Send"}
+                </motion.span>
+              </AnimatePresence>
+            </button>
+          </form>
+        </main>
+      </div>
+    </MotionConfig>
   );
 }
 
 type UIMessagePart = ReturnType<typeof useChat>["messages"][number]["parts"][number];
 
 function MessagePart({ part }: { part: UIMessagePart }) {
+  const content = renderPart(part);
+  if (content === null) return null;
+
+  if (part.type.startsWith("tool-") && "state" in part) {
+    // Both input states render the same loading line, so treat them as one
+    // phase; otherwise the line would re-animate as the input finishes streaming.
+    const phase =
+      part.state === "input-streaming" || part.state === "input-available"
+        ? "loading"
+        : (part.state ?? "loading");
+    return <ToolPhaseSwap phase={phase}>{content}</ToolPhaseSwap>;
+  }
+
+  return content;
+}
+
+function ToolPhaseSwap({
+  phase,
+  children,
+}: {
+  phase: string;
+  children: ReactNode;
+}) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={phase}
+        variants={blurSwap}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function renderPart(part: UIMessagePart): ReactNode {
   switch (part.type) {
     case "text":
       return (
@@ -313,10 +402,16 @@ function NewsList({ items }: { items: NewsItem[] }) {
     );
   }
   return (
-    <ul className="flex flex-col gap-2">
+    <motion.ul
+      variants={staggerChildren()}
+      initial="hidden"
+      animate="visible"
+      className="flex flex-col gap-2"
+    >
       {items.map((item) => (
-        <li
+        <motion.li
           key={item.url}
+          variants={riseIn}
           className="flex items-start justify-between gap-3 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
         >
           <div>
@@ -337,8 +432,8 @@ function NewsList({ items }: { items: NewsItem[] }) {
             Open
             <ExternalLinkIcon />
           </a>
-        </li>
+        </motion.li>
       ))}
-    </ul>
+    </motion.ul>
   );
 }
