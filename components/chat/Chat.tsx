@@ -2,8 +2,19 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState, type ReactNode } from "react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  useReducedMotion,
+} from "motion/react";
 import type { Quote, NewsItem, HistoricalPrice } from "@/lib/schemas/finance";
 import { CandlestickChart } from "@/components/chart/CandlestickChart";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -11,6 +22,7 @@ import { Markdown } from "@/components/chat/Markdown";
 import { formatDate } from "@/lib/format-date";
 import {
   blurSwap,
+  enterTransition,
   exitTransition,
   riseIn,
   staggerChildren,
@@ -27,27 +39,58 @@ export function Chat() {
   // returns finishReason "other" mid-answer), so a truncated reply isn't
   // presented as complete.
   const [cutOff, setCutOff] = useState(false);
+  // Screen-reader announcement. Streamed text isn't in a live region (it would
+  // be read chunk by chunk), so this announces the reply once it's complete.
+  const [announcement, setAnnouncement] = useState("");
   const { messages, sendMessage, status, error, regenerate } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
-    onFinish: ({ finishReason, isAbort, isDisconnect, isError }) => {
-      if (isError || isAbort) return;
-      setCutOff(isDisconnect || (finishReason !== undefined && finishReason !== "stop"));
+    onFinish: ({ message, finishReason, isAbort, isDisconnect, isError }) => {
+      if (isError) {
+        setAnnouncement("Something went wrong. Retry is available.");
+        return;
+      }
+      if (isAbort) return;
+      const wasCutOff =
+        isDisconnect || (finishReason !== undefined && finishReason !== "stop");
+      setCutOff(wasCutOff);
+      const text = message.parts
+        .flatMap((part) => (part.type === "text" ? [part.text] : []))
+        .join("\n");
+      setAnnouncement(
+        `${text || "Reply complete."}${wasCutOff ? " This reply was cut off before it finished." : ""}`,
+      );
     },
   });
   const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { scrollRef, contentRef, stickToBottom } = useStickToBottom();
 
   const isBusy = status === "submitted" || status === "streaming";
+
+  // Suggestions unmount and Send disables on submit, which would drop focus
+  // to <body>; return it to the input so keyboard users can keep going. Skip
+  // on touch screens, where focusing the input pops up the keyboard.
+  const refocusInput = () => {
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    inputRef.current?.focus();
+  };
 
   const submit = (text: string) => {
     if (!text.trim() || isBusy) return;
     setCutOff(false);
+    setAnnouncement("Assistant is replying…");
+    stickToBottom();
     sendMessage({ text });
     setInput("");
+    refocusInput();
   };
 
   const retry = () => {
     setCutOff(false);
+    setAnnouncement("Assistant is replying…");
+    stickToBottom();
     regenerate();
+    refocusInput();
   };
 
   return (
@@ -68,7 +111,14 @@ export function Chat() {
         </header>
 
         <main className="flex flex-1 min-h-0 flex-col">
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <p role="status" className="sr-only">
+            {announcement}
+          </p>
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
+          >
+            <div ref={contentRef}>
             {messages.length === 0 ? (
               <motion.div
                 variants={staggerChildren(0.05)}
@@ -96,8 +146,10 @@ export function Chat() {
                 ))}
               </motion.div>
             ) : (
-              // TODO: add role="log"/aria-live="polite" so screen readers announce streamed messages
-              <div className="mx-auto flex max-w-2xl flex-col gap-6">
+              <section
+                aria-label="Conversation"
+                className="mx-auto flex max-w-2xl flex-col gap-6"
+              >
                 {messages.map((message) => (
                   <motion.div
                     key={message.id}
@@ -134,7 +186,7 @@ export function Chat() {
                     <TypingIndicator />
                   </motion.div>
                 )}
-              </div>
+              </section>
             )}
 
             <AnimatePresence>
@@ -153,6 +205,7 @@ export function Chat() {
                 )
               )}
             </AnimatePresence>
+            </div>
           </div>
 
           <form
@@ -162,12 +215,14 @@ export function Chat() {
             }}
             className="mx-auto flex w-full max-w-2xl gap-2 border-t border-zinc-200 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 dark:border-zinc-800"
           >
+            {/* Stays enabled while a reply streams (submit() blocks sending)
+                so it keeps focus and the next question can be typed. */}
             <input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              disabled={isBusy}
               placeholder="Ask about a stock..."
-              className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
+              className="flex-1 rounded-full border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50"
             />
             <button
               type="submit"
@@ -192,6 +247,42 @@ export function Chat() {
       </div>
     </MotionConfig>
   );
+}
+
+// Keeps the chat scrolled to the newest content while it grows (streamed
+// text, tool results, height animations), unless the user has scrolled up.
+function useStickToBottom() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const stuck = useRef(true);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    const content = contentRef.current;
+    if (!scroller || !content) return;
+
+    const onScroll = () => {
+      const distance =
+        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+      stuck.current = distance < 80;
+    };
+    const observer = new ResizeObserver(() => {
+      if (stuck.current) scroller.scrollTop = scroller.scrollHeight;
+    });
+
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    observer.observe(content);
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, []);
+
+  const stickToBottom = () => {
+    stuck.current = true;
+  };
+
+  return { scrollRef, contentRef, stickToBottom };
 }
 
 function isQuotaError(error: Error): boolean {
@@ -258,6 +349,9 @@ function MessagePart({
   return content;
 }
 
+// Crossfades a tool's loading line into its result. The two states overlap
+// (popLayout) and the slot's height animates, so content below slides to its
+// new position instead of jumping when a 20px status line becomes a chart.
 function ToolPhaseSwap({
   phase,
   children,
@@ -265,18 +359,45 @@ function ToolPhaseSwap({
   phase: string;
   children: ReactNode;
 }) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | "auto">("auto");
+  const [isResizing, setIsResizing] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  useLayoutEffect(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setHeight(entry.borderBoxSize[0].blockSize);
+    });
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={phase}
-        variants={blurSwap}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      initial={false}
+      animate={{ height }}
+      transition={reduceMotion ? { duration: 0 } : enterTransition}
+      onAnimationStart={() => setIsResizing(true)}
+      onAnimationComplete={() => setIsResizing(false)}
+      // Clip only while resizing: the chart tooltip can extend past the slot.
+      style={{ overflow: isResizing ? "hidden" : "visible" }}
+    >
+      <div ref={innerRef} className="relative">
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            key={phase}
+            variants={blurSwap}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }
 
@@ -339,7 +460,12 @@ function renderPart(part: UIMessagePart, role: UIMessage["role"]): ReactNode {
         case "output-available": {
           const candles =
             (part.output as { candles: HistoricalPrice[] })?.candles ?? [];
-          return <CandlestickChart candles={candles} />;
+          return (
+            <CandlestickChart
+              candles={candles}
+              symbol={(part.input as { symbol?: string } | undefined)?.symbol}
+            />
+          );
         }
         case "output-error":
           return <ToolError message={part.errorText} />;
@@ -478,7 +604,9 @@ function NewsList({ items }: { items: NewsItem[] }) {
           variants={riseIn}
           className="flex items-start justify-between gap-3 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800"
         >
-          <div>
+          {/* min-w-0 lets the column shrink below its longest word so long
+              headlines/URLs wrap instead of pushing the card off-screen. */}
+          <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
               {item.headline}
             </p>
