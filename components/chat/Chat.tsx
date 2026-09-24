@@ -7,6 +7,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type { Quote, NewsItem, HistoricalPrice } from "@/lib/schemas/finance";
 import { CandlestickChart } from "@/components/chart/CandlestickChart";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { Markdown } from "@/components/chat/Markdown";
 import {
   blurSwap,
   exitTransition,
@@ -95,7 +96,11 @@ export function Chat() {
                     </span>
                     <div className="flex flex-col gap-3">
                       {message.parts.map((part, index) => (
-                        <MessagePart key={index} part={part} />
+                        <MessagePart
+                          key={index}
+                          part={part}
+                          role={message.role}
+                        />
                       ))}
                     </div>
                   </motion.div>
@@ -177,10 +182,17 @@ export function Chat() {
   );
 }
 
-type UIMessagePart = ReturnType<typeof useChat>["messages"][number]["parts"][number];
+type UIMessage = ReturnType<typeof useChat>["messages"][number];
+type UIMessagePart = UIMessage["parts"][number];
 
-function MessagePart({ part }: { part: UIMessagePart }) {
-  const content = renderPart(part);
+function MessagePart({
+  part,
+  role,
+}: {
+  part: UIMessagePart;
+  role: UIMessage["role"];
+}) {
+  const content = renderPart(part, role);
   if (content === null) return null;
 
   if (part.type.startsWith("tool-") && "state" in part) {
@@ -218,9 +230,11 @@ function ToolPhaseSwap({
   );
 }
 
-function renderPart(part: UIMessagePart): ReactNode {
+function renderPart(part: UIMessagePart, role: UIMessage["role"]): ReactNode {
   switch (part.type) {
     case "text":
+      // Assistant replies are markdown; user input is shown exactly as typed.
+      if (role === "assistant") return <Markdown>{part.text}</Markdown>;
       return (
         <p className="whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">
           {part.text}
@@ -356,7 +370,13 @@ function QuoteCard({ quote }: { quote: Quote }) {
           {quote.symbol}
         </p>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          as of {new Date(quote.asOf).toLocaleString()}
+          {/* asOf is a trading day at UTC midnight; format in UTC so local
+              time zones west of UTC don't roll it back to the previous day. */}
+          as of{" "}
+          {new Date(quote.asOf).toLocaleDateString(undefined, {
+            dateStyle: "medium",
+            timeZone: "UTC",
+          })}
         </p>
       </div>
       <div className="sm:text-right">
