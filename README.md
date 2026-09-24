@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finance AI Assistant
 
-## Getting Started
+A chat app for financial research questions. Instead of guessing at numbers, the model calls tools that fetch real market data from [Alpha Vantage](https://www.alphavantage.co/): live quotes, recent news, and daily price history (drawn as a candlestick chart).
 
-First, run the development server:
+Ask things like:
+
+- "What's NVDA trading at today?"
+- "Show me the last 60 days of AAPL."
+- "Any recent news on TSLA?"
+
+## Tech stack
+
+- [Next.js 16](https://nextjs.org) (App Router), React 19, TypeScript
+- [Vercel AI SDK](https://ai-sdk.dev) with Google Gemini (`gemini-3.6-flash`) for streaming chat and tool calling
+- [Alpha Vantage](https://www.alphavantage.co/documentation/) for market data
+- [Zod](https://zod.dev) to validate API responses
+- [lightweight-charts](https://github.com/tradingview/lightweight-charts) and [Recharts](https://recharts.org) for charts
+- Tailwind CSS v4
+- Vitest and Testing Library (unit tests), Playwright with axe-core (e2e and accessibility tests)
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 24 (see `.nvmrc`; run `nvm use` if you use nvm)
+- An [Alpha Vantage API key](https://www.alphavantage.co/support/#api-key) (free)
+- A [Google AI Studio API key](https://aistudio.google.com/app/apikey) for Gemini (free tier available)
+
+### Setup
+
+```bash
+git clone git@github.com:Angie-96/finance-ai-assistant.git
+cd finance-ai-assistant
+npm install
+```
+
+Create a `.env.local` file in the project root:
+
+```bash
+ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_key
+```
+
+Start the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Create a production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Run ESLint |
+| `npx tsc --noEmit` | Type-check the project (run `npx next typegen` first) |
+| `npm run test` | Run the Vitest unit tests |
+| `npm run test:e2e` | Run the Playwright end-to-end tests (needs both API keys) |
 
-## Learn More
+## How it works
 
-To learn more about Next.js, take a look at the following resources:
+```
+Browser (Chat UI)
+   │  POST /api/chat
+   ▼
+app/api/chat/route.ts ── streamText (Gemini) ──▶ picks and calls tools
+   │
+   ▼
+lib/tools/finance-tools.ts   getQuote · getNews · getHistoricalPrices
+   │
+   ▼
+lib/alpha-vantage.ts          cache (5 min) + throttle (1 request per 1.5 s)
+   │
+   ▼
+Alpha Vantage REST API
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **`app/api/chat/route.ts`** streams the model's reply. The system prompt tells the model to look up real data with its tools before answering, and to cite sources.
+- **`lib/tools/finance-tools.ts`** defines the three tools. Each one calls Alpha Vantage and checks the result against a Zod schema from `lib/schemas/finance.ts`.
+- **`lib/alpha-vantage.ts`** is the only code that talks to Alpha Vantage:
+  - **Caching:** responses are kept in memory for 5 minutes, keyed by request URL.
+  - **Throttling:** requests run one at a time, at least 1.5 seconds apart. The free tier allows 1 request per second, and the model often calls several tools in one turn.
+- **`components/`** holds the UI: the chat (`chat/Chat.tsx`), the candlestick chart with hover tooltips (`chart/CandlestickChart.tsx`), and the light/dark theme toggle (`theme/ThemeToggle.tsx`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Adding a tool
 
-## Deploy on Vercel
+1. Add a Zod schema for the tool's output in `lib/schemas/finance.ts`.
+2. Define the tool in `lib/tools/finance-tools.ts`. Call Alpha Vantage through `alphaVantageRequest` (never `fetch` directly), so caching and throttling still apply.
+3. Register the tool in the `tools` object in `app/api/chat/route.ts`.
+4. Add a unit test in `tests/unit/`. If the tool changes the UI, add a Playwright test in `tests/e2e/` too.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Testing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Unit tests** (`tests/unit/`) use Vitest, jsdom, and Testing Library.
+- **End-to-end tests** (`tests/e2e/`) use Playwright, with axe-core checking accessibility. They hit the real APIs, so both keys must be set.
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request to `main`. It runs lint, typegen, typecheck, unit tests, the production build, and the Playwright e2e tests. For the e2e step to work, add `ALPHA_VANTAGE_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` as repository secrets.
+
+If you use Claude Code, the `/check` command runs the same checks locally, except e2e.
+
+## Limitations
+
+- **Rate limits:** Alpha Vantage's free tier is limited to about 25 requests per day, and 1 per second. The cache and throttle help, but a busy session can still run out.
+- **US stocks only:** the tools are written for US equity tickers.
+- **Not financial advice:** this is a research demo. The model can still misread or misstate data.

@@ -46,4 +46,4 @@ Follow the existing pattern rather than inventing a new one:
 - For any UI/frontend change, start the dev server and exercise it in a real browser (chat flow, chart rendering/tooltips, theme toggle) before calling the task done — Vitest/type checks verify correctness, not that the feature actually works.
 
 ## CI
-`.github/workflows/ci.yml` runs lint, typegen, typecheck, unit tests, and build on every push/PR to `main`. Playwright e2e is **not** wired into CI yet — it needs `ALPHA_VANTAGE_API_KEY`/`GOOGLE_GENERATIVE_AI_API_KEY` as repo secrets first.
+`.github/workflows/ci.yml` runs lint, typegen, typecheck, unit tests, build, and Playwright e2e on every push/PR to `main`. The e2e step reads `ALPHA_VANTAGE_API_KEY`/`GOOGLE_GENERATIVE_AI_API_KEY` from repo secrets. `/check` covers everything except e2e.
