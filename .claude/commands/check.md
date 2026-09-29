@@ -2,7 +2,7 @@
 description: Run the same checks as CI (lint, typegen, typecheck, unit tests, build) before pushing
 ---
 
-Run these in order and stop at the first failure, reporting the exact error output:
+The Next.js app lives in `web/`. Run these in order from that directory (e.g. `cd web && npm run lint`) and stop at the first failure, reporting the exact error output:
 
 1. `npm run lint`
 2. `npx next typegen`
