@@ -8,6 +8,13 @@ Ask things like:
 - "Show me the last 60 days of AAPL."
 - "Any recent news on TSLA?"
 
+## Repository layout
+
+| Path | What's there |
+| --- | --- |
+| `web/` | The Next.js app (UI and chat API route) |
+| `.github/workflows/` | CI |
+
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org) (App Router), React 19, TypeScript
@@ -22,7 +29,7 @@ Ask things like:
 
 ### Prerequisites
 
-- Node.js 24 (see `.nvmrc`; run `nvm use` if you use nvm)
+- Node.js 24 (see `web/.nvmrc`; run `nvm use` if you use nvm)
 - An [Alpha Vantage API key](https://www.alphavantage.co/support/#api-key) (free)
 - A [Google AI Studio API key](https://aistudio.google.com/app/apikey) for Gemini (free tier available)
 
@@ -30,11 +37,11 @@ Ask things like:
 
 ```bash
 git clone git@github.com:Angie-96/finance-ai-assistant.git
-cd finance-ai-assistant
+cd finance-ai-assistant/web
 npm install
 ```
 
-Create a `.env.local` file in the project root:
+Create a `web/.env.local` file:
 
 ```bash
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
@@ -50,6 +57,8 @@ npm run dev
 Then open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
+
+Run these from `web/`.
 
 | Command | What it does |
 | --- | --- |
@@ -67,36 +76,36 @@ Then open [http://localhost:3000](http://localhost:3000).
 Browser (Chat UI)
    │  POST /api/chat
    ▼
-app/api/chat/route.ts ── streamText (Gemini) ──▶ picks and calls tools
+web/app/api/chat/route.ts ── streamText (Gemini) ──▶ picks and calls tools
    │
    ▼
-lib/tools/finance-tools.ts   getQuote · getNews · getHistoricalPrices
+web/lib/tools/finance-tools.ts   getQuote · getNews · getHistoricalPrices
    │
    ▼
-lib/alpha-vantage.ts          cache (5 min) + throttle (1 request per 1.5 s)
+web/lib/alpha-vantage.ts          cache (5 min) + throttle (1 request per 1.5 s)
    │
    ▼
 Alpha Vantage REST API
 ```
 
-- **`app/api/chat/route.ts`** streams the model's reply. The system prompt tells the model to look up real data with its tools before answering, and to cite sources.
-- **`lib/tools/finance-tools.ts`** defines the three tools. Each one calls Alpha Vantage and checks the result against a Zod schema from `lib/schemas/finance.ts`.
-- **`lib/alpha-vantage.ts`** is the only code that talks to Alpha Vantage:
+- **`web/app/api/chat/route.ts`** streams the model's reply. The system prompt tells the model to look up real data with its tools before answering, and to cite sources.
+- **`web/lib/tools/finance-tools.ts`** defines the three tools. Each one calls Alpha Vantage and checks the result against a Zod schema from `web/lib/schemas/finance.ts`.
+- **`web/lib/alpha-vantage.ts`** is the only code that talks to Alpha Vantage:
   - **Caching:** responses are kept in memory for 5 minutes, keyed by request URL.
   - **Throttling:** requests run one at a time, at least 1.5 seconds apart. The free tier allows 1 request per second, and the model often calls several tools in one turn.
-- **`components/`** holds the UI: the chat (`chat/Chat.tsx`), the candlestick chart with hover tooltips (`chart/CandlestickChart.tsx`), and the light/dark theme toggle (`theme/ThemeToggle.tsx`).
+- **`web/components/`** holds the UI: the chat (`chat/Chat.tsx`), the candlestick chart with hover tooltips (`chart/CandlestickChart.tsx`), and the light/dark theme toggle (`theme/ThemeToggle.tsx`).
 
 ### Adding a tool
 
-1. Add a Zod schema for the tool's output in `lib/schemas/finance.ts`.
-2. Define the tool in `lib/tools/finance-tools.ts`. Call Alpha Vantage through `alphaVantageRequest` (never `fetch` directly), so caching and throttling still apply.
-3. Register the tool in the `tools` object in `app/api/chat/route.ts`.
-4. Add a unit test in `tests/unit/`. If the tool changes the UI, add a Playwright test in `tests/e2e/` too.
+1. Add a Zod schema for the tool's output in `web/lib/schemas/finance.ts`.
+2. Define the tool in `web/lib/tools/finance-tools.ts`. Call Alpha Vantage through `alphaVantageRequest` (never `fetch` directly), so caching and throttling still apply.
+3. Register the tool in the `tools` object in `web/app/api/chat/route.ts`.
+4. Add a unit test in `web/tests/unit/`. If the tool changes the UI, add a Playwright test in `web/tests/e2e/` too.
 
 ## Testing
 
-- **Unit tests** (`tests/unit/`) use Vitest, jsdom, and Testing Library.
-- **End-to-end tests** (`tests/e2e/`) use Playwright, with axe-core checking accessibility. They hit the real APIs, so both keys must be set.
+- **Unit tests** (`web/tests/unit/`) use Vitest, jsdom, and Testing Library.
+- **End-to-end tests** (`web/tests/e2e/`) use Playwright, with axe-core checking accessibility. They hit the real APIs, so both keys must be set.
 
 ## CI
 

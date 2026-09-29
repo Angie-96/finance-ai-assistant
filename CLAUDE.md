@@ -1,8 +1,9 @@
-@AGENTS.md
-
 # Finance AI Assistant
 
 A Next.js 16 chat app that answers financial research questions using tool-calling. The model (Gemini, via AI SDK) calls tools backed by Alpha Vantage to get real quotes/news/prices instead of hallucinating them.
+
+## Repo layout
+Monorepo. The Next.js app lives in `web/` (it has its own `CLAUDE.md` that imports the Next.js agent rules in `web/AGENTS.md`). A Python API in `api/` is being added.
 
 ## Stack
 - Next.js 16 (App Router) + React 19 + TypeScript
@@ -12,11 +13,12 @@ A Next.js 16 chat app that answers financial research questions using tool-calli
 - Testing: Vitest (unit) + Playwright (e2e, incl. `@axe-core/playwright` for a11y)
 
 ## Environment
-Required in `.env.local` (see `.env.local` for actual values, never print/log them):
+Required in `web/.env.local` (see `web/.env.local` for actual values, never print/log them):
 - `ALPHA_VANTAGE_API_KEY`
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 
 ## Commands
+Run from `web/`:
 - `npm run dev` — dev server
 - `npm run lint` — ESLint
 - `npx tsc --noEmit` — typecheck (CI also runs `npx next typegen` first)
@@ -26,23 +28,23 @@ Required in `.env.local` (see `.env.local` for actual values, never print/log th
 - `/check` (Claude Code command) — runs lint + typegen + typecheck + unit tests + build, mirroring CI, before you push
 
 ## Architecture
-- `app/api/chat/route.ts` — chat endpoint; streams `streamText` output using the Gemini model and the finance tools below.
-- `lib/tools/finance-tools.ts` — AI SDK `tool()` definitions: `getQuote`, `getNews`, `getHistoricalPrices`. Each calls `alphaVantageRequest` and parses the response through a Zod schema from `lib/schemas/finance.ts`.
-- `lib/alpha-vantage.ts` — the only place that talks to Alpha Vantage. Handles:
+- `web/app/api/chat/route.ts` — chat endpoint; streams `streamText` output using the Gemini model and the finance tools below.
+- `web/lib/tools/finance-tools.ts` — AI SDK `tool()` definitions: `getQuote`, `getNews`, `getHistoricalPrices`. Each calls `alphaVantageRequest` and parses the response through a Zod schema from `web/lib/schemas/finance.ts`.
+- `web/lib/alpha-vantage.ts` — the only place that talks to Alpha Vantage. Handles:
   - **Caching**: in-memory `Map`, 5 min TTL, keyed by full request URL.
   - **Throttling**: requests are serialized through a promise chain with a 1.5s minimum interval, because the model can call multiple tools in one turn and Alpha Vantage's free tier allows only 1 req/sec. Do not bypass this by calling `fetch` directly elsewhere — always go through `alphaVantageRequest`.
-- `lib/schemas/finance.ts` — Zod schemas (`QuoteSchema`, `NewsItemSchema`, `HistoricalPriceSchema`) that double as TS types via `z.infer`.
-- `components/chat/Chat.tsx`, `components/chart/CandlestickChart.tsx`, `components/theme/ThemeToggle.tsx` — UI.
+- `web/lib/schemas/finance.ts` — Zod schemas (`QuoteSchema`, `NewsItemSchema`, `HistoricalPriceSchema`) that double as TS types via `z.infer`.
+- `web/components/chat/Chat.tsx`, `web/components/chart/CandlestickChart.tsx`, `web/components/theme/ThemeToggle.tsx` — UI.
 
 ## Adding a new finance tool
 Follow the existing pattern rather than inventing a new one:
-1. Add a Zod schema for the tool's return shape in `lib/schemas/finance.ts`.
-2. Add the Alpha Vantage call in `lib/tools/finance-tools.ts` using `alphaVantageRequest` (gets caching/throttling for free) and parse the result through the schema.
-3. Register the tool in the `tools: {}` object in `app/api/chat/route.ts`.
+1. Add a Zod schema for the tool's return shape in `web/lib/schemas/finance.ts`.
+2. Add the Alpha Vantage call in `web/lib/tools/finance-tools.ts` using `alphaVantageRequest` (gets caching/throttling for free) and parse the result through the schema.
+3. Register the tool in the `tools: {}` object in `web/app/api/chat/route.ts`.
 4. Add a unit test and, if it affects the UI, a Playwright check.
 
 ## Testing conventions
-- Unit tests live in `tests/unit/`, e2e in `tests/e2e/`.
+- Unit tests live in `web/tests/unit/`, e2e in `web/tests/e2e/`.
 - For any UI/frontend change, start the dev server and exercise it in a real browser (chat flow, chart rendering/tooltips, theme toggle) before calling the task done — Vitest/type checks verify correctness, not that the feature actually works.
 
 ## CI
