@@ -1,0 +1,37 @@
+# Local infrastructure for the API. Start with `docker compose up -d`.
+# The API itself runs on your machine (`uv run fastapi dev` in api/) and connects
+# to these on localhost. An `api` service gets added once there's a Dockerfile.
+
+services:
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "127.0.0.1:6379:6379" # localhost only, not exposed to your network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Not used by the API yet: prepared for the SEC filings RAG feature (pgvector).
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      # Local development credentials only. Never reuse these anywhere real.
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance
+      POSTGRES_DB: finance
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql/<version>/, so the
+      # volume mounts the parent directory.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance -d finance"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres-data:

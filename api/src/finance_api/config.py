@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     google_generative_ai_api_key: SecretStr
     alpha_vantage_api_key: SecretStr
 
+    # Matches the redis service in docker-compose.yml.
+    redis_url: str = "redis://localhost:6379/0"
+
     gemini_model: str = "gemini-3.6-flash"
     # Max model calls per chat request (tool rounds + the final answer), the same cap as
     # the web app's `stopWhen: isStepCount(5)`. Keeps a looping model from burning
