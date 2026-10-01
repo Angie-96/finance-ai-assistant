@@ -1,0 +1,41 @@
+[project]
+name = "finance-api"
+version = "0.1.0"
+description = "FastAPI backend for the Finance AI Assistant: Gemini tool-calling over Alpha Vantage market data."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.142.2",
+    "pydantic-settings>=2.15.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.fastapi]
+# Lets `uv run fastapi dev` / `fastapi run` find the app without a path argument.
+entrypoint = "finance_api.main:app"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: import sorting, B: bugbear (likely bugs),
+# UP: pyupgrade (modern syntax), SIM: simplifications, RUF: ruff-specific checks.
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+]
