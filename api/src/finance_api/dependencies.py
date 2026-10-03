@@ -9,11 +9,19 @@ from typing import Annotated
 from fastapi import Depends, Request
 from redis.asyncio import Redis
 
+from finance_api.alpha_vantage import AlphaVantageClient
 
+
+# Both are created once at startup in main.lifespan and stored on app.state.
 def get_redis(request: Request) -> Redis:
-    # Created once at startup in main.lifespan and stored on app.state.
     redis: Redis = request.app.state.redis
     return redis
 
 
+def get_alpha_vantage(request: Request) -> AlphaVantageClient:
+    client: AlphaVantageClient = request.app.state.alpha_vantage
+    return client
+
+
 RedisDep = Annotated[Redis, Depends(get_redis)]
+AlphaVantageDep = Annotated[AlphaVantageClient, Depends(get_alpha_vantage)]

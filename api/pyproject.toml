@@ -5,6 +5,7 @@ description = "FastAPI backend for the Finance AI Assistant: Gemini tool-calling
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.142.2",
+    "httpx>=0.28.1",
     "pydantic-settings>=2.15.0",
     "redis>=8.1.0",
     "structlog>=26.1.0",
@@ -33,6 +34,8 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets tests be plain `async def` functions without a marker on each one.
+asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
@@ -40,5 +43,7 @@ dev = [
     "httpx2>=2.13.1",
     "mypy>=2.3.1",
     "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
     "ruff>=0.16.9",
 ]
