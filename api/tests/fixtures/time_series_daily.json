@@ -1,0 +1,12 @@
+{
+  "Meta Data": {
+    "1. Information": "Daily Prices (open, high, low, close) and Volumes",
+    "2. Symbol": "TSLA",
+    "3. Last Refreshed": "2026-09-23"
+  },
+  "Time Series (Daily)": {
+    "2026-09-23": {"1. open": "250.00", "2. high": "255.50", "3. low": "248.10", "4. close": "254.20", "5. volume": "90000000"},
+    "2026-09-21": {"1. open": "240.00", "2. high": "246.00", "3. low": "239.00", "4. close": "245.00", "5. volume": "80000000"},
+    "2026-09-22": {"1. open": "245.00", "2. high": "251.00", "3. low": "244.00", "4. close": "250.00", "5. volume": "85000000"}
+  }
+}

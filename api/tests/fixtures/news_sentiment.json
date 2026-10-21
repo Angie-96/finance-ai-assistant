@@ -1,0 +1,30 @@
+{
+  "items": "3",
+  "sentiment_score_definition": "x <= -0.35: Bearish; ...",
+  "feed": [
+    {
+      "title": "Apple unveils new chips",
+      "url": "https://example.com/apple-chips",
+      "time_published": "20260923T143005",
+      "summary": "Apple announced its next generation of in-house silicon.",
+      "source": "Example News",
+      "overall_sentiment_score": 0.21
+    },
+    {
+      "title": "Analysts raise Apple targets",
+      "url": "https://example.com/apple-targets",
+      "time_published": "20260922T090000",
+      "summary": "Several analysts raised their price targets after the event.",
+      "source": "Example Markets",
+      "overall_sentiment_score": 0.3
+    },
+    {
+      "title": "Apple supplier update",
+      "url": "https://example.com/apple-supplier",
+      "time_published": "20260921T180000",
+      "summary": "A key supplier reported strong demand.",
+      "source": "Example Wire",
+      "overall_sentiment_score": 0.1
+    }
+  ]
+}
