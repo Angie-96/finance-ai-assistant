@@ -7,8 +7,9 @@ tools returned.
 
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, HttpUrl, TypeAdapter
-from pydantic.alias_generators import to_camel
+from pydantic import AfterValidator, HttpUrl, TypeAdapter
+
+from finance_api.schemas.base import CamelModel
 
 _http_url = TypeAdapter(HttpUrl)
 
@@ -22,15 +23,6 @@ def _check_http_url(value: str) -> str:
 
 
 Url = Annotated[str, AfterValidator(_check_http_url)]
-
-
-class CamelModel(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        validate_by_name=True,  # build with Python names: Quote(change_percent=...)
-        validate_by_alias=True,  # or with JSON names: Quote(changePercent=...)
-        serialize_by_alias=True,  # model_dump() / JSON output uses camelCase
-    )
 
 
 class Quote(CamelModel):
