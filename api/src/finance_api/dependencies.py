@@ -10,9 +10,11 @@ from fastapi import Depends, Request
 from redis.asyncio import Redis
 
 from finance_api.alpha_vantage import AlphaVantageClient
+from finance_api.chat.agent import ContentStreamer
+from finance_api.config import Settings, get_settings
 
 
-# Both are created once at startup in main.lifespan and stored on app.state.
+# These are created once at startup in main.lifespan and stored on app.state.
 def get_redis(request: Request) -> Redis:
     redis: Redis = request.app.state.redis
     return redis
@@ -23,5 +25,12 @@ def get_alpha_vantage(request: Request) -> AlphaVantageClient:
     return client
 
 
+def get_gemini(request: Request) -> ContentStreamer:
+    models: ContentStreamer = request.app.state.gemini.aio.models
+    return models
+
+
 RedisDep = Annotated[Redis, Depends(get_redis)]
 AlphaVantageDep = Annotated[AlphaVantageClient, Depends(get_alpha_vantage)]
+GeminiDep = Annotated[ContentStreamer, Depends(get_gemini)]
+SettingsDep = Annotated[Settings, Depends(get_settings)]

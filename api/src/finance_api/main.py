@@ -5,12 +5,13 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from google import genai
 from redis.asyncio import Redis
 
 from finance_api.alpha_vantage import AlphaVantageClient
 from finance_api.config import get_settings
 from finance_api.logging import configure_logging, request_logging_middleware
-from finance_api.routes import health
+from finance_api.routes import chat, health
 
 
 @asynccontextmanager
@@ -24,11 +25,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # doesn't connect yet, so the app still starts if Redis is down; /health reports it.
     redis = Redis.from_url(settings.redis_url, decode_responses=True)
     http = httpx.AsyncClient(timeout=10.0)
+    gemini = genai.Client(api_key=settings.google_generative_ai_api_key.get_secret_value())
     app.state.redis = redis
     app.state.alpha_vantage = AlphaVantageClient(
         http, redis, settings.alpha_vantage_api_key.get_secret_value()
     )
+    app.state.gemini = gemini
     yield
+    await gemini.aio.aclose()
     await http.aclose()
     await redis.aclose()
 
@@ -36,3 +40,4 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Finance AI Assistant API", lifespan=lifespan)
 app.middleware("http")(request_logging_middleware)
 app.include_router(health.router)
+app.include_router(chat.router)

@@ -11,8 +11,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from finance_api.alpha_vantage import AlphaVantageClient
 from finance_api.tools.finance import TOOLS, ToolError, run_tool
+from tests.fakes import FakeAlphaVantage
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -22,23 +22,11 @@ def load_fixture(name: str) -> dict[str, Any]:
     return data
 
 
-class FakeAlphaVantage(AlphaVantageClient):
-    """Returns a canned response and records the params each call was made with."""
-
-    def __init__(self, response: dict[str, Any]) -> None:
-        self.response = response
-        self.calls: list[dict[str, str]] = []
-
-    async def request(self, params: Any) -> dict[str, Any]:
-        self.calls.append(dict(params))
-        return self.response
-
-
 # --- getQuote -------------------------------------------------------------------------
 
 
 async def test_get_quote_parses_global_quote() -> None:
-    av = FakeAlphaVantage(load_fixture("global_quote.json"))
+    av = FakeAlphaVantage({"GLOBAL_QUOTE": load_fixture("global_quote.json")})
 
     output = await run_tool(av, "getQuote", {"symbol": "NVDA"})
 
@@ -53,7 +41,7 @@ async def test_get_quote_parses_global_quote() -> None:
 
 
 async def test_get_quote_without_data_raises() -> None:
-    av = FakeAlphaVantage({"Global Quote": {}})
+    av = FakeAlphaVantage({"GLOBAL_QUOTE": {"Global Quote": {}}})
 
     with pytest.raises(ToolError, match="No quote data found for ZZZZ"):
         await run_tool(av, "getQuote", {"symbol": "ZZZZ"})
@@ -63,7 +51,7 @@ async def test_get_quote_without_data_raises() -> None:
 
 
 async def test_get_news_parses_feed_and_applies_limit() -> None:
-    av = FakeAlphaVantage(load_fixture("news_sentiment.json"))
+    av = FakeAlphaVantage({"NEWS_SENTIMENT": load_fixture("news_sentiment.json")})
 
     output = await run_tool(av, "getNews", {"symbol": "AAPL", "limit": 2})
 
@@ -87,7 +75,7 @@ async def test_get_news_parses_feed_and_applies_limit() -> None:
 
 
 async def test_get_news_defaults_to_five_items() -> None:
-    av = FakeAlphaVantage(load_fixture("news_sentiment.json"))
+    av = FakeAlphaVantage({"NEWS_SENTIMENT": load_fixture("news_sentiment.json")})
 
     await run_tool(av, "getNews", {"symbol": "AAPL"})
 
@@ -104,7 +92,7 @@ async def test_get_news_without_feed_returns_no_items() -> None:
 
 
 async def test_get_historical_prices_returns_oldest_first() -> None:
-    av = FakeAlphaVantage(load_fixture("time_series_daily.json"))
+    av = FakeAlphaVantage({"TIME_SERIES_DAILY": load_fixture("time_series_daily.json")})
 
     output = await run_tool(av, "getHistoricalPrices", {"symbol": "TSLA"})
 
@@ -127,7 +115,7 @@ async def test_get_historical_prices_returns_oldest_first() -> None:
 
 
 async def test_get_historical_prices_keeps_only_the_latest_days() -> None:
-    av = FakeAlphaVantage(load_fixture("time_series_daily.json"))
+    av = FakeAlphaVantage({"TIME_SERIES_DAILY": load_fixture("time_series_daily.json")})
 
     output = await run_tool(av, "getHistoricalPrices", {"symbol": "TSLA", "days": 2})
 
@@ -138,7 +126,7 @@ async def test_get_historical_prices_keeps_only_the_latest_days() -> None:
 async def test_get_historical_prices_requests_full_history_beyond_100_days(
     days: int, outputsize: str
 ) -> None:
-    av = FakeAlphaVantage(load_fixture("time_series_daily.json"))
+    av = FakeAlphaVantage({"TIME_SERIES_DAILY": load_fixture("time_series_daily.json")})
 
     await run_tool(av, "getHistoricalPrices", {"symbol": "TSLA", "days": days})
 

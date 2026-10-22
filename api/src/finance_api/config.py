@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     max_steps: int = 5
     log_level: str = "INFO"
 
+    # Gemini paid-tier prices in USD per 1M tokens, used only to estimate cost in logs.
+    # Source: https://ai.google.dev/gemini-api/docs/pricing (gemini-3.6-flash, Oct 2026).
+    # Google lists these doubling on 2027-01-01; the free tier costs nothing.
+    gemini_input_usd_per_mtok: float = 0.75
+    gemini_output_usd_per_mtok: float = 3.75  # thinking tokens are billed as output
+
 
 @lru_cache
 def get_settings() -> Settings:
